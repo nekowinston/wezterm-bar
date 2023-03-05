@@ -73,7 +73,9 @@ local dividers = {
 
 -- conforming to https://github.com/wez/wezterm/commit/e4ae8a844d8feaa43e1de34c5cc8b4f07ce525dd
 -- exporting an apply_to_config function, even though we don't change the users config
-M.apply_to_config = function(_, opts)
+M.apply_to_config = function(c, opts)
+	c.use_fancy_tab_bar = false
+
 	-- make the opts arg optional
 	if not opts then
 		opts = {}
