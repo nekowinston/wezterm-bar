@@ -2,7 +2,8 @@ local wezterm = require("wezterm")
 
 local M = {}
 
-M.config = {
+-- default configuration
+local config = {
 	dividers = "slant_right",
 	indicator = {
 		leader = {
@@ -33,6 +34,9 @@ M.config = {
 	},
 }
 
+-- parsed config
+local C = {}
+
 local function tableMerge(t1, t2)
 	for k, v in pairs(t2) do
 		if type(v) == "table" then
@@ -48,67 +52,72 @@ local function tableMerge(t1, t2)
 	return t1
 end
 
-local C = {}
+local dividers = {
+	slant_right = {
+		left = utf8.char(0xe0be),
+		right = utf8.char(0xe0bc),
+	},
+	slant_left = {
+		left = utf8.char(0xe0ba),
+		right = utf8.char(0xe0b8),
+	},
+	arrows = {
+		left = utf8.char(0xe0b2),
+		right = utf8.char(0xe0b0),
+	},
+	rounded = {
+		left = utf8.char(0xe0b6),
+		right = utf8.char(0xe0b4),
+	},
+}
 
-M.apply_to_config = function(config, opts)
+-- conforming to https://github.com/wez/wezterm/commit/e4ae8a844d8feaa43e1de34c5cc8b4f07ce525dd
+-- exporting an apply_to_config function, even though we don't change the users config
+M.apply_to_config = function(_, opts)
+	-- make the opts arg optional
 	if not opts then
 		opts = {}
 	end
-	M.config = tableMerge(M.config, opts)
-	local dividers = {
-		slant_right = {
-			left = utf8.char(0xe0be),
-			right = utf8.char(0xe0bc),
-		},
-		slant_left = {
-			left = utf8.char(0xe0ba),
-			right = utf8.char(0xe0b8),
-		},
-		arrows = {
-			left = utf8.char(0xe0b2),
-			right = utf8.char(0xe0b0),
-		},
-		rounded = {
-			left = utf8.char(0xe0b6),
-			right = utf8.char(0xe0b4),
-		},
-	}
 
+	-- combine user config with defaults
+	config = tableMerge(config, opts)
 	C.div = {
 		l = "",
 		r = "",
 	}
-	if M.config.dividers then
-		C.div.l = dividers[M.config.dividers].left
-		C.div.r = dividers[M.config.dividers].right
+
+	if config.dividers then
+		C.div.l = dividers[config.dividers].left
+		C.div.r = dividers[config.dividers].right
 	end
 
 	C.leader = {
-		enabled = M.config.indicator.leader.enabled or true,
-		off = M.config.indicator.leader.off,
-		on = M.config.indicator.leader.on,
+		enabled = config.indicator.leader.enabled or true,
+		off = config.indicator.leader.off,
+		on = config.indicator.leader.on,
 	}
 
 	C.mode = {
-		enabled = M.config.indicator.mode.enabled,
-		names = M.config.indicator.mode.names,
+		enabled = config.indicator.mode.enabled,
+		names = config.indicator.mode.names,
 	}
 
 	C.tabs = {
-		numerals = M.config.tabs.numerals,
-		pane_count_style = M.config.tabs.pane_count,
+		numerals = config.tabs.numerals,
+		pane_count_style = config.tabs.pane_count,
 		brackets = {
-			active = M.config.tabs.brackets.active,
-			inactive = M.config.tabs.brackets.inactive,
+			active = config.tabs.brackets.active,
+			inactive = config.tabs.brackets.inactive,
 		},
 	}
 
 	C.clock = {
-		enabled = M.config.clock.enabled,
-		format = M.config.clock.format,
+		enabled = config.clock.enabled,
+		format = config.clock.format,
 	}
 
-	C.p = (M.config.dividers == "rounded") and "" or " "
+	-- set the right-hand padding to 0 spaces, if the rounded style is active
+	C.p = (config.dividers == "rounded") and "" or " "
 end
 
 -- superscript/subscript
@@ -180,6 +189,7 @@ wezterm.on("format-tab-title", function(tab, tabs, panes, config, hover, max_wid
 		end
 	end
 
+	-- TODO: make colors configurable
 	local rainbow = {
 		config.resolved_palette.ansi[2],
 		config.resolved_palette.indexed[16],
@@ -243,6 +253,7 @@ wezterm.on("format-tab-title", function(tab, tabs, panes, config, hover, max_wid
 		index_i = tab.tab_index + 1
 	end
 
+	local index
 	if tab.is_active then
 		index = string.format("%s%s%s ", C.tabs.brackets.active[1], index_i, C.tabs.brackets.active[2])
 	else
@@ -270,7 +281,6 @@ wezterm.on("format-tab-title", function(tab, tabs, panes, config, hover, max_wid
 	}
 end)
 
--- custom status
 wezterm.on("update-status", function(window, pane)
 	local active_kt = window:active_key_table() ~= nil
 	local show = C.leader.enabled or (active_kt and C.mode.enabled)
