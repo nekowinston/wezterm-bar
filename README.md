@@ -15,7 +15,7 @@ c.color_scheme = "Catppuccin Mocha"
 
 -- then finally apply the plugin
 -- these are currently the defaults:
-wezterm.plugin.require("https://github.com/nekowinston/wezterm.bar").apply_to_config(c, {
+wezterm.plugin.require("https://github.com/nekowinston/wezterm-bar").apply_to_config(c, {
   position = "bottom",
   max_width = 32,
   dividers = "slant_right", -- or "slant_left", "arrows", "rounded", false
