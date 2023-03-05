@@ -188,8 +188,8 @@ local roman_numerals = {
 -- custom tab bar
 wezterm.on(
   "format-tab-title",
-  function(tab, tabs, _panes, _config, _hover, _max_width)
-    local colours = config.resolved_palette.tab_bar
+  function(tab, tabs, _panes, conf, _hover, _max_width)
+    local colours = conf.resolved_palette.tab_bar
 
     local active_tab_index = 0
     for _, t in ipairs(tabs) do
@@ -200,12 +200,12 @@ wezterm.on(
 
     -- TODO: make colors configurable
     local rainbow = {
-      config.resolved_palette.ansi[2],
-      config.resolved_palette.indexed[16],
-      config.resolved_palette.ansi[4],
-      config.resolved_palette.ansi[3],
-      config.resolved_palette.ansi[5],
-      config.resolved_palette.ansi[6],
+      conf.resolved_palette.ansi[2],
+      conf.resolved_palette.indexed[16],
+      conf.resolved_palette.ansi[4],
+      conf.resolved_palette.ansi[3],
+      conf.resolved_palette.ansi[5],
+      conf.resolved_palette.ansi[6],
     }
 
     local i = tab.tab_index % 6
@@ -283,8 +283,8 @@ wezterm.on(
     local fillerwidth = 2 + string.len(index) + string.len(pane_count) + 2
 
     local tabtitle = tab.active_pane.title
-    local width = config.tab_max_width - fillerwidth - 1
-    if (#tabtitle + fillerwidth) > config.tab_max_width then
+    local width = conf.tab_max_width - fillerwidth - 1
+    if (#tabtitle + fillerwidth) > conf.tab_max_width then
       tabtitle = wezterm.truncate_right(tabtitle, width) .. "…"
     end
 
