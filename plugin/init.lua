@@ -4,6 +4,8 @@ local M = {}
 
 -- default configuration
 local config = {
+	position = "bottom",
+	max_width = 32,
 	dividers = "slant_right",
 	indicator = {
 		leader = {
@@ -74,8 +76,6 @@ local dividers = {
 -- conforming to https://github.com/wez/wezterm/commit/e4ae8a844d8feaa43e1de34c5cc8b4f07ce525dd
 -- exporting an apply_to_config function, even though we don't change the users config
 M.apply_to_config = function(c, opts)
-	c.use_fancy_tab_bar = false
-
 	-- make the opts arg optional
 	if not opts then
 		opts = {}
@@ -120,6 +120,11 @@ M.apply_to_config = function(c, opts)
 
 	-- set the right-hand padding to 0 spaces, if the rounded style is active
 	C.p = (config.dividers == "rounded") and "" or " "
+
+	-- set wezterm config options according to the parsed config
+	c.use_fancy_tab_bar = false
+	c.tab_bar_at_bottom = config.position == "bottom"
+	c.tab_max_width = config.max_width
 end
 
 -- superscript/subscript
