@@ -1,5 +1,11 @@
 name: Check
-on: [push, pull_request]
+on:
+  push:
+    paths:
+      - "**.lua"
+  pull_request:
+    paths:
+      - "**.lua"
 
 jobs:
   check:
