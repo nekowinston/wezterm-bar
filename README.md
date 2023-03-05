@@ -9,8 +9,11 @@ local c = wezterm.config_builder()
 
 -- build your config according to
 -- https://wezfurlong.org/wezterm/config/lua/wezterm/config_builder.html
--- then finally apply the plugin
 
+-- the plugin is currently made for Catppuccin only
+c.color_scheme = "Catppuccin Mocha"
+
+-- then finally apply the plugin
 -- these are currently the defaults:
 wezterm.plugin.require("https://github.com/nekowinston/wezterm.bar").apply_to_config(c, {
   position = "bottom",
