@@ -94,7 +94,7 @@ M.apply_to_config = function(c, opts)
   end
 
   C.leader = {
-    enabled = config.indicator.leader.enabled or true,
+    enabled = config.indicator.leader.enabled and true,
     off = config.indicator.leader.off,
     on = config.indicator.leader.on,
   }
