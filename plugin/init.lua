@@ -54,6 +54,14 @@ local function tableMerge(t1, t2)
   return t1
 end
 
+local function map(tbl, f)
+  local t = {}
+  for k, v in pairs(tbl) do
+    t[k] = f(v)
+  end
+  return t
+end
+
 local dividers = {
   slant_right = {
     left = utf8.char(0xe0be),
@@ -110,6 +118,21 @@ M.apply_to_config = function(c, opts)
     brackets = {
       active = config.tabs.brackets.active,
       inactive = config.tabs.brackets.inactive,
+    },
+    overrides = config.tabs.overrides,
+    colours = config.tabs.colours or {
+      -- Red
+      "#f38ba8",
+      -- Yellow
+      "#f9e2af",
+      -- Green
+      "#a6e3a1",
+      -- Blue
+      "#89b4fa",
+      -- Lavender
+      "#b4befe",
+      -- Pink
+      "#f5c2e7",
     },
   }
 
@@ -185,11 +208,70 @@ local roman_numerals = {
   "Ⅻ",
 }
 
+local function get_overrides(tab, _conf, _hover, _max_width, keys)
+  local override_opts
+  local title = tab.active_pane.title
+
+  for name, opts in pairs(C.tabs.overrides or {}) do
+    local filter = opts.matcher
+        and opts.matcher(name, title, tab, _conf, _hover, _max_width)
+      or title:find(name)
+    if filter then
+      override_opts = opts
+      break
+    end
+  end
+
+  if override_opts == nil then
+    return nil
+  end
+
+  if type(keys) == "string" then
+    return override_opts[keys]
+  end
+  return table.unpack(map(keys, function(key)
+    return override_opts[key]
+  end))
+end
+
+local function convert_to_hex(user_colour, resolved_palette)
+  -- colour is already hex code
+  if type(user_colour) == "string" and user_colour:sub(1, 1) == "#" then
+    return user_colour
+  end
+
+  -- otherwise, an index to look up in the resolved_palette
+  local colour
+  if user_colour < 8 then
+    colour = resolved_palette.ansi[user_colour]
+  elseif user_colour < 16 then
+    colour = resolved_palette.brights[user_colour]
+  else
+    colour = resolved_palette.indexed[user_colour]
+  end
+
+  return colour
+end
+
+local function get_rainbow(resolved_palette)
+  local count = #C.tabs.colours
+  local rainbow = {}
+
+  -- order is important, use ipairs() to iterate in order
+  for _, col in ipairs(C.tabs.colours) do
+    table.insert(rainbow, convert_to_hex(col, resolved_palette))
+  end
+
+  return count, rainbow
+end
+
 -- custom tab bar
 wezterm.on(
   "format-tab-title",
   function(tab, tabs, _panes, conf, _hover, _max_width)
-    local colours = conf.resolved_palette.tab_bar
+    local resolved_palette = conf.resolved_palette
+    local tab_colours = resolved_palette.tab_bar
+    local rainbow_count, rainbow = get_rainbow(resolved_palette)
 
     local active_tab_index = 0
     for _, t in ipairs(tabs) do
@@ -198,22 +280,22 @@ wezterm.on(
       end
     end
 
-    -- TODO: make colors configurable
-    local rainbow = {
-      conf.resolved_palette.ansi[2],
-      conf.resolved_palette.indexed[16],
-      conf.resolved_palette.ansi[4],
-      conf.resolved_palette.ansi[3],
-      conf.resolved_palette.ansi[5],
-      conf.resolved_palette.ansi[6],
-    }
+    local user_bg, user_fg = get_overrides(
+      tabs[active_tab_index + 1],
+      conf,
+      _hover,
+      _max_width,
+      { "background", "foreground" }
+    )
+    user_bg = user_bg and convert_to_hex(user_bg, resolved_palette)
+    user_fg = user_fg and convert_to_hex(user_fg, resolved_palette)
 
-    local i = tab.tab_index % 6
-    local active_bg = rainbow[i + 1]
-    local active_fg = colours.background
-    local inactive_bg = colours.inactive_tab.bg_color
-    local inactive_fg = colours.inactive_tab.fg_color
-    local new_tab_bg = colours.new_tab.bg_color
+    local i = tab.tab_index % rainbow_count
+    local active_bg = user_bg or rainbow[i + 1]
+    local active_fg = user_fg or tab_colours.background
+    local inactive_fg = tab_colours.inactive_tab.fg_color
+    local inactive_bg = tab_colours.inactive_tab.bg_color
+    local new_tab_bg = tab_colours.new_tab.bg_color
 
     local s_bg, s_fg, e_bg, e_fg
 
@@ -233,7 +315,7 @@ wezterm.on(
     elseif tab.tab_index == active_tab_index - 1 then
       s_bg = inactive_bg
       s_fg = inactive_fg
-      e_bg = rainbow[(i + 1) % 6 + 1]
+      e_bg = user_bg or rainbow[(i + 1) % rainbow_count + 1]
       e_fg = inactive_bg
     elseif tab.is_active then
       s_bg = active_bg
@@ -282,13 +364,18 @@ wezterm.on(
     -- start and end hardcoded numbers are the Powerline + " " padding
     local fillerwidth = 2 + string.len(index) + string.len(pane_count) + 2
 
-    local tabtitle = tab.active_pane.title
+    local default_title = tab.active_pane.title
+    local user_title = get_overrides(tab, conf, _hover, _max_width, "title")
+    local tab_title = user_title
+        and user_title(default_title, tab, conf, _hover, _max_width)
+      or default_title
+
     local width = conf.tab_max_width - fillerwidth - 1
-    if (#tabtitle + fillerwidth) > conf.tab_max_width then
-      tabtitle = wezterm.truncate_right(tabtitle, width) .. "…"
+    if (#tab_title + fillerwidth) > conf.tab_max_width then
+      tab_title = wezterm.truncate_right(tab_title, width) .. "…"
     end
 
-    local title = string.format(" %s%s%s%s", index, tabtitle, pane_count, C.p)
+    local title = string.format(" %s%s%s%s", index, tab_title, pane_count, C.p)
 
     return {
       { Background = { Color = s_bg } },
